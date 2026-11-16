@@ -43,7 +43,7 @@ export async function handleChat(message: string, isThinking: boolean) {
   return result;
 }
 
-export async function* handleChatSteaming(
+export async function* handleChatStreaming(
   message: string,
   isThinking: boolean,
 ) {
@@ -53,15 +53,34 @@ export async function* handleChatSteaming(
     config: {
       thinkingConfig: {
         includeThoughts: isThinking,
-        thinkingLevel: isThinking ? ThinkingLevel.HIGH : ThinkingLevel.MINIMAL,
-        thinkingBudget: isThinking ? -1 : 0,
+        // thinkingLevel: isThinking ? ThinkingLevel.HIGH : ThinkingLevel.MINIMAL,
+        // thinkingBudget: isThinking ? -1 : 0,
       },
     },
   });
 
-  for await (const chunk of response) {
+  if (isThinking) {
+    for await (const chunk of response) {
+      const parts = chunk.candidates?.[0]?.content?.parts;
+      if (parts) {
+        for (const part of parts) {
+          if (!part.text) {
+            continue;
+          } else if (part.thought) {
+            yield `[thought]${part.text}`;
+          } else {
+            yield part.text;
+          }
+        }
+      }
+    }
+  } else {
+    for await (const chunk of response) {
     if (chunk.text) {
       yield chunk.text;
     }
   }
+  }
+
+  
 }
